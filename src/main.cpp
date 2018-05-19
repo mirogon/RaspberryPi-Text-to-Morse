@@ -2,14 +2,16 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <limits>
+#include <ios>
 #include <wiringPi.h>
 
 using namespace std::this_thread;
 using namespace std::chrono;
 
-const int TIMEUNIT_LENGTH = 200;
+const int TIMEUNIT_LENGTH = 100;
 
-std::string char_to_morsestr(char c);
+bool char_to_morsestr(char c, std::string& outputstr);
 
 std::string str_to_morsestr(std::string string);
 
@@ -21,26 +23,48 @@ int main(int argc, char* argv[])
 	wiringPiSetup();
 	pinMode(7,OUTPUT);
 
-	std::cout<<"Insert the text you want to convert to a morse code"<<std::endl;
+	bool quit = false;
 	
-	std::string input;
-
-	std::getline(std::cin, input);
+	while(quit == false)
+	{ 
 	
-	std::string morsestr;
+		std::cout<<"Insert the text you want to convert to a morse code"<<std::endl;
+	
+		std::string input;
 
-	morsestr = str_to_morsestr(input);
+		std::getline(std::cin, input);
+	
+		std::string morsestr;
 
-	output_morsestr(morsestr, 7);
+		morsestr = str_to_morsestr(input);
 
-	std::cin.get();
+		output_morsestr(morsestr, 7);
+
+		std::cout<<"Continue? Y(YES) N(NO)"<<std::endl;
+
+		char c;
+
+		std::cin>>c;
+
+		if(c == 'Y' || c == 'y')
+		{
+		}
+
+		else
+		{
+			quit = true;
+		}
+	
+		std::cin.clear();
+		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	}
 	
 	return 0;
 }
 
-std::string char_to_morsestr(char c)
+bool char_to_morsestr(char c, std::string& outputstring)
 {
-	std::string morsestr;
+	static std::string morsestr;
 
 	switch(c)
 	{
@@ -98,18 +122,34 @@ std::string char_to_morsestr(char c)
 		case 'Z': morsestr = "llss"; break;
 		
 		case ' ': morsestr = " "; break;
+	
+		default: std::cout<<"Your text contains an invalid character: "<<c<<"!"<<std::endl; return 1; break;
 	}
 
-	return morsestr;	
+	outputstring = morsestr;
+
+	return 0;
 }
 
 std::string str_to_morsestr(std::string string)
 {
-	std::string morsestr;
+	static std::string morsestr;
+	morsestr = std::string();
+
+	if(string.size()<= 0)
+	{
+		return "";
+	}
 
 	for(int i = 0; i < string.size(); ++i)
 	{
-		morsestr += char_to_morsestr( string.at(i) );
+		static std::string appender;
+		if( char_to_morsestr(string.at(i), appender) == 1 )
+		{
+			return "";
+		}	
+
+		morsestr += appender;
 		morsestr.push_back('p');
 	}
 
@@ -118,7 +158,12 @@ std::string str_to_morsestr(std::string string)
 }
 
 void output_morsestr(std::string morsestr, unsigned short pin_num)
-{
+{	
+	if(morsestr.size() <= 0)
+	{
+		return;
+	}
+
 	for(int i = 0; i < morsestr.size(); i++)
 	{
 		switch(morsestr.at(i))
